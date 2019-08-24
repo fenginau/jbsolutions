@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2027
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "jbsolutions", "jbsolutions\jbsolutions.csproj", "{5D9ABBD2-07FF-4EC5-877B-EF183B2C6E34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "jbsolutions.Tests", "jbsolutions.Tests\jbsolutions.Tests.csproj", "{5ACA0B67-85A9-48B0-8EC9-1255B511A51D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5D9ABBD2-07FF-4EC5-877B-EF183B2C6E34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D9ABBD2-07FF-4EC5-877B-EF183B2C6E34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D9ABBD2-07FF-4EC5-877B-EF183B2C6E34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D9ABBD2-07FF-4EC5-877B-EF183B2C6E34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5ACA0B67-85A9-48B0-8EC9-1255B511A51D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5ACA0B67-85A9-48B0-8EC9-1255B511A51D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5ACA0B67-85A9-48B0-8EC9-1255B511A51D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5ACA0B67-85A9-48B0-8EC9-1255B511A51D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0D5A7749-412F-410A-9B91-F51CBC86477A}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,7 @@
+
+.vs/
+packages/
+jbsolutions/bin/
+jbsolutions/obj/
+jbsolutions.Tests/bin/
+jbsolutions.Tests/obj/
