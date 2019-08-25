@@ -1,0 +1,64 @@
+<html>
+
+<head>
+    <script src="./jquery.min.js"></script>
+    <script src="./core.js"></script>
+    <script src="./enc-base64.js"></script>
+    <script src="./sha256.js"></script>
+    <script src="./jsencrypt.min.js"></script>
+    <script>
+        const serverPath = "http://localhost:65381/";
+
+        function rsaEncrypt(text, key) {
+            const encrypt = new JSEncrypt();
+            encrypt.setPublicKey(key);
+            return encrypt.encrypt($(text));
+        }
+
+        $(document).ready(function () {
+            fetch(`${serverPath}auth`)
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (myJson) {
+                    console.log(JSON.stringify(myJson));
+                });
+            $.get(`${serverPath}auth`, data => {
+                console.log(data);
+            });
+
+
+            $('#login').click(function () {
+                const username = $('#username').val();
+                const pwd = $('#password').val();
+
+                const auth = { username, password: pwd };
+
+
+                // var hash = CryptoJS.SHA256(pwd + username);
+                // var pwdHash = hash.toString(CryptoJS.enc.Base64)
+                // console.log('1: p1dKQhmLfX7uLAN3A6C5VVjxlUV5CNaXXmgeIFX9Xrk=');
+                // console.log('2: ' + pwdHash);
+
+                // $.post(`${serverPath}auth`, a,
+                //     function (data, status) {
+                //         localStorage.setItem("token", data);
+                //         console.log(data);
+                //     });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div id='unauthed'>
+        <input type="text" id="username" value="demo" />
+        <input type="text" id="password" value="demo" />
+        <button id="login">login</button>
+    </div>
+    <div id='authed' style='display:none'>
+        123
+    </div>
+</body>
+
+</html>
