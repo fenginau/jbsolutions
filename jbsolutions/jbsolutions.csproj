@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Constants\LogType.cs" />
     <Compile Include="Controllers\ProductsController.cs" />
     <Compile Include="Db\Database.cs" />
     <Compile Include="Global.asax.cs">

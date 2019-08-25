@@ -73,5 +73,20 @@ namespace jbsolutions.Controllers
                 return InternalServerError(e);
             }
         }
+
+        [Route("products/{id}")]
+        [HttpDelete]
+        public IHttpActionResult DeleteProduct(string id)
+        {
+            try
+            {
+                Database.Delete(id);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return InternalServerError(e);
+            }
+        }
     }
 }

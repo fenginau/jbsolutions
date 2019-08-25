@@ -1,4 +1,5 @@
-﻿using jbsolutions.Models;
+﻿using jbsolutions.Constants;
+using jbsolutions.Models;
 using jbsolutions.Utils;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,10 @@ namespace jbsolutions.Db
 
         // Data files are located in App_Date folder 
         private static readonly string DbPath = HostingEnvironment.MapPath("~/App_Data");
+        private static readonly char Divider = ',';
+        private static readonly char SubDivider = ':';
+        private static readonly string DividerReplacement = "%{1}";
+        private static readonly string SubDividerReplacement = "%{2}";
         private static string _logFile;
         private static List<Product> _products = new List<Product>();
 
@@ -54,7 +59,7 @@ namespace jbsolutions.Db
                 }
 
                 LoadData();
-                //TakeSnapshot();
+                TakeSnapshot();
             }
             catch (Exception e)
             {
@@ -74,7 +79,7 @@ namespace jbsolutions.Db
                     {
                         while ((line = file.ReadLine()) != null)
                         {
-                            var arr = line.Split(',');
+                            var arr = AesEncryption.Decrypt(line).Split(Divider);
                             if (arr.Length < 2)
                             {
                                 Log($"Line incorrent. Line {count}");
@@ -82,19 +87,19 @@ namespace jbsolutions.Db
                             }
                             switch (arr[0])
                             {
-                                case "OBJECT":
-                                case "ADD":
+                                case LogType.Snapshot:
+                                case LogType.Add:
                                     var newProduct = new Product
                                     {
-                                        Id = AesEncryption.Decrypt(arr[1]),
-                                        Brand = AesEncryption.Decrypt(arr[2]),
-                                        Description = AesEncryption.Decrypt(arr[3]),
-                                        Model = AesEncryption.Decrypt(arr[4]),
+                                        Id = arr[1],
+                                        Brand = ToMemoryFormat(arr[2]),
+                                        Description = ToMemoryFormat(arr[3]),
+                                        Model = ToMemoryFormat(arr[4]),
                                     };
                                     InsertOrUpdate(newProduct);
                                     break;
-                                case "MODIFY":
-                                    var product = _products.Find(p => p.Id == AesEncryption.Decrypt(arr[1]));
+                                case LogType.Modify:
+                                    var product = _products.Find(p => p.Id == arr[1]);
                                     if (product == null)
                                     {
                                         Log($"Cannot find product. Line {count}");
@@ -103,16 +108,19 @@ namespace jbsolutions.Db
 
                                     for (var i = 2; i < arr.Length; i++)
                                     {
-                                        var fields = arr[i].Split(':');
+                                        var fields = arr[i].Split(SubDivider);
                                         if (fields.Length != 2)
                                         {
                                             Log($"Incorrect data. Line {count}");
                                             break;
                                         }
                                         product.GetType()
-                                            .GetProperty(AesEncryption.Decrypt(fields[0]))
-                                            .SetValue(product, AesEncryption.Decrypt(fields[1]));
+                                            .GetProperty(fields[0])
+                                            .SetValue(product, ToMemoryFormatSub(fields[1]));
                                     }
+                                    break;
+                                case LogType.Delete:
+                                    Remove(arr[1]);
                                     break;
                             }
                             count++;
@@ -126,7 +134,7 @@ namespace jbsolutions.Db
             }
         }
 
-        internal static void TakeSnapshot()
+        private static void TakeSnapshot()
         {
             try
             {
@@ -142,14 +150,14 @@ namespace jbsolutions.Db
                 {
                     foreach (var product in _products)
                     {
-                        var line = String.Join(",", new String[] {
-                            "OBJECT",
-                            AesEncryption.Encrypt(product.Id),
-                            AesEncryption.Encrypt(product.Brand),
-                            AesEncryption.Encrypt(product.Description),
-                            AesEncryption.Encrypt(product.Model),
+                        var line = String.Join(Divider.ToString(), new String[] {
+                            LogType.Snapshot,
+                            product.Id,
+                            ToLogFormat(product.Brand),
+                            ToLogFormat(product.Description),
+                            ToLogFormat(product.Model),
                         });
-                        fs.WriteLine(line);
+                        fs.WriteLine(AesEncryption.Encrypt(line));
                     }
                     _logFile = file;
                 }
@@ -160,11 +168,11 @@ namespace jbsolutions.Db
             }
         }
 
-        internal static void Modify(string Id, List<ModifyModel> fields)
+        internal static void Modify(string id, List<ModifyModel> fields)
         {
             try
             {
-                var product = _products.Find(p => p.Id == Id);
+                var product = _products.Find(p => p.Id == id);
                 if (product == null)
                 {
                     throw new KeyNotFoundException("This product does not exist.");
@@ -176,8 +184,8 @@ namespace jbsolutions.Db
                     using (StreamWriter fs = File.AppendText(_logFile))
                     {
                         var arr = new String[fields.Count + 2];
-                        arr[0] = "MODIFY";
-                        arr[1] = AesEncryption.Encrypt(Id);
+                        arr[0] = LogType.Modify;
+                        arr[1] = id;
                         var i = 2;
 
                         fields.ForEach(m =>
@@ -186,12 +194,12 @@ namespace jbsolutions.Db
                                 .GetProperties()
                                 .SingleOrDefault(p => p.Name.Equals(m.Prop, StringComparison.CurrentCultureIgnoreCase));
                             m.Prop = prop.Name;
-                            arr[i] = $"{AesEncryption.Encrypt(m.Prop)}:{AesEncryption.Encrypt(m.Value)}";
+                            arr[i] = $"{m.Prop}{SubDivider}{ToLogFormatSub(m.Value)}";
                             i++;
                         });
 
-                        var line = String.Join(",", arr);
-                        fs.WriteLine(line);
+                        var line = String.Join(Divider.ToString(), arr);
+                        fs.WriteLine(AesEncryption.Encrypt(line));
                     }
 
                     // Then update the object.
@@ -199,8 +207,6 @@ namespace jbsolutions.Db
                     {
                         product.GetType().GetProperty(m.Prop).SetValue(product, m.Value);
                     });
-
-
                 }
             }
             catch (Exception e)
@@ -219,14 +225,14 @@ namespace jbsolutions.Db
                     // Update the log file first.
                     using (StreamWriter fs = File.AppendText(_logFile))
                     {
-                        var line = String.Join(",", new String[] {
-                            "ADD",
-                            AesEncryption.Encrypt(product.Id),
-                            AesEncryption.Encrypt(product.Brand),
-                            AesEncryption.Encrypt(product.Description),
-                            AesEncryption.Encrypt(product.Model),
+                        var line = String.Join(Divider.ToString(), new String[] {
+                            LogType.Add,
+                            product.Id,
+                            ToLogFormat(product.Brand),
+                            ToLogFormat(product.Description),
+                            ToLogFormat(product.Model),
                         });
-                        fs.WriteLine(line);
+                        fs.WriteLine(AesEncryption.Encrypt(line));
                     }
 
                     // Then update the object.
@@ -237,6 +243,37 @@ namespace jbsolutions.Db
             {
                 throw new Exception("Error when adding the record.", e);
             }
+        }
+
+        internal static void Delete(string id)
+        {
+            try
+            {
+                if (File.Exists(_logFile))
+                {
+                    // Update the log file first.
+                    using (StreamWriter fs = File.AppendText(_logFile))
+                    {
+                        var line = String.Join(Divider.ToString(), new String[] {
+                            LogType.Delete,
+                            id,
+                        });
+                        fs.WriteLine(AesEncryption.Encrypt(line));
+                    }
+
+                    // Then update the object.
+                    Remove(id);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Error when adding the record.", e);
+            }
+        }
+
+        private static void Remove(string id)
+        {
+            _products.RemoveAll(p => p.Id == id);
         }
 
         private static void InsertOrUpdate(Product product, bool isInsert = false)
@@ -270,6 +307,26 @@ namespace jbsolutions.Db
         private static void Log(string message)
         {
             Console.WriteLine(message);
+        }
+
+        private static string ToLogFormat(string str)
+        {
+            return str.Replace(Divider.ToString(), DividerReplacement);
+        }
+
+        private static string ToLogFormatSub(string str)
+        {
+            return str.Replace(SubDivider.ToString(), SubDividerReplacement);
+        }
+
+        private static string ToMemoryFormat(string str)
+        {
+            return str.Replace(DividerReplacement, Divider.ToString());
+        }
+
+        private static string ToMemoryFormatSub(string str)
+        {
+            return str.Replace(SubDividerReplacement, SubDivider.ToString());
         }
     }
 }
