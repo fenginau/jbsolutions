@@ -1,7 +1,9 @@
-﻿using System;
+﻿using jbsolutions.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace jbsolutions
 {
@@ -11,6 +13,7 @@ namespace jbsolutions
         {
             // Web API configuration and services
             config.EnableCors();
+            config.MessageHandlers.Add(new TokenValidationHandler());
 
             // Web API routes
             config.MapHttpAttributeRoutes();
@@ -20,6 +23,10 @@ namespace jbsolutions
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+            // Enable Cors
+            var cors = new EnableCorsAttribute(origins: "*", headers: "*", methods: "*");
+            config.EnableCors(cors);
         }
     }
 }

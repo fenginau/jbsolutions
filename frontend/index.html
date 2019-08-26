@@ -1,50 +1,220 @@
 <html>
 
 <head>
-    <script src="./jquery.min.js"></script>
-    <script src="./core.js"></script>
-    <script src="./enc-base64.js"></script>
-    <script src="./sha256.js"></script>
-    <script src="./jsencrypt.min.js"></script>
+    <script src='./jquery.min.js'></script>
+    <script src='./core.js'></script>
+    <script src='./enc-base64.js'></script>
+    <script src='./enc-utf8.js'></script>
+    <script src='./cipher-core.js'></script>
+    <script src='./aes.js'></script>
+    <script src='./sha256.js'></script>
+    <script src='./mode-ecb.js'></script>
+    <script src='./pad-pkcs7.js'></script>
+    <script src='./jsencrypt.min.js'></script>
+    <script src="lodash.js"></script>
     <script>
-        const serverPath = "http://localhost:65381/";
+        const serverPath = 'http://localhost:65381/';
+        var productList;
 
-        function rsaEncrypt(text, key) {
+        function generateAesKey() {
+            const key = CryptoJS.lib.WordArray.random(16);
+            const iv = CryptoJS.lib.WordArray.random(16);
+            const keyB64 = CryptoJS.enc.Base64.stringify(key);
+            const ivB64 = CryptoJS.enc.Base64.stringify(iv);
+            const pair = `${keyB64}:${ivB64}`;
+            localStorage.setItem('AES_KEY', pair);
+
+            return pair;
+        }
+
+        function aesEncrypt(text) {
+            const aesKey = localStorage.getItem('AES_KEY')
+
+            if (isEmpty(aesKey)) {
+                alert('An error occurred.');
+                return;
+            }
+
+            const keyPair = aesKey.split(':');
+            const key = CryptoJS.enc.Base64.parse(keyPair[0]);
+            const iv = CryptoJS.enc.Base64.parse(keyPair[1]);
+            const encrypted = CryptoJS.AES.encrypt(text, key, { iv: iv, mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 });
+            return encrypted.toString();
+        }
+
+        function aesDecrypt(cipherText) {
+            const aesKey = localStorage.getItem('AES_KEY')
+
+            if (isEmpty(aesKey)) {
+                alert('An error occurred.');
+                return;
+            }
+            const keyPair = aesKey.split(':');
+            const key = CryptoJS.enc.Base64.parse(keyPair[0]);
+            const iv = CryptoJS.enc.Base64.parse(keyPair[1]);
+            let decrypted = CryptoJS.AES.decrypt(cipherText, key, { iv: iv, mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 });
+            return decrypted.toString(CryptoJS.enc.Utf8);
+
+        }
+
+        function rsaEncrypt(text) {
             const encrypt = new JSEncrypt();
-            encrypt.setPublicKey(key);
-            return encrypt.encrypt($(text));
+            const rsaKey = localStorage.getItem('RSA_PUBLIC_KEY')
+
+            if (isEmpty(rsaKey)) {
+                alert('An error occurred.');
+                return;
+            }
+
+            encrypt.setPublicKey(rsaKey);
+            return encrypt.encrypt(text);
+        }
+
+        function hashTextAsBase64(text, salt) {
+            return CryptoJS.SHA256(text + salt).toString(CryptoJS.enc.Base64);
+        }
+
+        function isEmpty(text) {
+            return text === undefined || text === null || text === '';
+        }
+
+        function updateProduct(id) {
+            const updates = [];
+            const product = _.find(productList, { Id: id });
+            const desc = $(`#desc${id}`).val();
+            const model = $(`#model${id}`).val();
+            const brand = $(`#brand${id}`).val();
+            _.forEach(product, (value, key) => {
+                if (key === 'Id') return;
+                const val = $(`#${key}${id}`).val()
+                if (val !== value) {
+                    updates.push({ prop: key, value: val });
+                }
+            });
+            if (updates.length > 0) {
+                const token = localStorage.getItem('JWT_TOKEN');
+                $.ajax({
+                    url: `${serverPath}products/${id}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(updates),
+                    beforeSend: function (xhr) { xhr.setRequestHeader('Authorization', token); },
+                    success: () => { $('#getall').trigger('click'); }
+                });
+            }
+        }
+
+        function deleteProduct(id) {
+            const token = localStorage.getItem('JWT_TOKEN');
+            $.ajax({
+                url: `${serverPath}products/${id}`,
+                type: 'DELETE',
+                beforeSend: function (xhr) { xhr.setRequestHeader('Authorization', token); },
+                success: () => { $('#getall').trigger('click'); }
+            });
+        }
+
+        function buildProduct(product) {
+            const div = $('<div>');
+            const desc = $('<input>', { id: `Description${product.Id}`, type: 'text', value: product.Description });
+            const model = $('<input>', { id: `Model${product.Id}`, type: 'text', value: product.Model });
+            const brand = $('<input>', { id: `Brand${product.Id}`, type: 'text', value: product.Brand });
+            const updateBtn = $('<input>', { type: 'button', click: updateProduct.bind(this, product.Id), value: 'Change' });
+            const deleteBtn = $('<input>', { type: 'button', click: deleteProduct.bind(this, product.Id), value: 'Delete' });
+            div.append(desc);
+            div.append(model);
+            div.append(brand);
+            div.append(updateBtn);
+            div.append(deleteBtn);
+            return div;
+        }
+
+        function buildDisplay(products) {
+            productList = products;
+            const container = $('#products');
+            container.empty();
+            products.forEach(p => {
+                container.append(buildProduct(p));
+            });
         }
 
         $(document).ready(function () {
-            fetch(`${serverPath}auth`)
-                .then(function (response) {
-                    return response.json();
-                })
-                .then(function (myJson) {
-                    console.log(JSON.stringify(myJson));
-                });
+            generateAesKey();
+
             $.get(`${serverPath}auth`, data => {
-                console.log(data);
+                console.log('RSA public obtained: \r\n', data);
+                localStorage.setItem('RSA_PUBLIC_KEY', data);
             });
 
 
             $('#login').click(function () {
                 const username = $('#username').val();
                 const pwd = $('#password').val();
+                const aesKey = localStorage.getItem('AES_KEY')
 
-                const auth = { username, password: pwd };
+                if (isEmpty(aesKey)) {
+                    alert('Aes fail.');
+                    return;
+                }
 
+                const auth = {
+                    username,
+                    password: hashTextAsBase64(pwd, username),
+                    aesKey: aesKey,
+                };
 
-                // var hash = CryptoJS.SHA256(pwd + username);
-                // var pwdHash = hash.toString(CryptoJS.enc.Base64)
-                // console.log('1: p1dKQhmLfX7uLAN3A6C5VVjxlUV5CNaXXmgeIFX9Xrk=');
-                // console.log('2: ' + pwdHash);
+                const encrypted = rsaEncrypt(JSON.stringify(auth));
+                $.post(`${serverPath}auth`, { request: encrypted },
+                    function (token, status) {
+                        localStorage.setItem('JWT_TOKEN', `Bearer ${token}`);
+                        console.log('JWT Token obtained: \r\n', `Bearer ${token}`);
+                        $('#unauthed').hide();
+                        $('#authed').show();
+                    }, 'json');
+            });
 
-                // $.post(`${serverPath}auth`, a,
-                //     function (data, status) {
-                //         localStorage.setItem("token", data);
-                //         console.log(data);
-                //     });
+            $('#getall').click(function () {
+                const querys = [];
+                if ($('#DescriptionFilter').val() !== '') {
+                    querys.push(`description=${encodeURIComponent($('#DescriptionFilter').val())}`);
+                }
+                if ($('#ModelFilter').val() !== '') {
+                    querys.push(`model=${encodeURIComponent($('#ModelFilter').val())}`);
+                }
+                if ($('#BrandFilter').val() !== '') {
+                    querys.push(`brand=${encodeURIComponent($('#BrandFilter').val())}`);
+                }
+                const query = querys.length > 0 ? `?${querys.join('&')}` : '';
+
+                const token = localStorage.getItem('JWT_TOKEN');
+                $.ajax({
+                    url: `${serverPath}products${query}`,
+                    type: 'GET',
+                    beforeSend: function (xhr) { xhr.setRequestHeader('Authorization', token); },
+                    success: (products) => { buildDisplay(products); }
+                });
+            });
+
+            $('#add').click(function () {
+                const product = {
+                    description: $('#newDescription').val(),
+                    model: $('#newModel').val(),
+                    brand: $('#newBrand').val(),
+                };
+                const token = localStorage.getItem('JWT_TOKEN');
+                $.ajax({
+                    url: `${serverPath}products`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(product),
+                    beforeSend: function (xhr) { xhr.setRequestHeader('Authorization', token); },
+                    success: () => {
+                        $('#newDescription').val('');
+                        $('#newModel').val('');
+                        $('#newBrand').val('');
+                        $('#getall').trigger('click');
+                    }
+                });
             });
         });
     </script>
@@ -54,10 +224,35 @@
     <div id='unauthed'>
         <input type="text" id="username" value="demo" />
         <input type="text" id="password" value="demo" />
-        <button id="login">login</button>
+        <button id="login">Login</button>
     </div>
     <div id='authed' style='display:none'>
-        123
+        <label style='display:inline-block;width:80px'>Filter:</label>
+        <br />
+        <label style='display:inline-block;width:80px'>Description</label>
+        <input type="text" id="DescriptionFilter" />
+        <br />
+        <label style='display:inline-block;width:80px'>Model</label>
+        <input type="text" id="ModelFilter" />
+        <br />
+        <label style='display:inline-block;width:80px'>Brand</label>
+        <input type="text" id="BrandFilter" />
+        <br />
+        <br />
+        <button id="getall">Get All Products</button>
+        <br />
+        <br />
+        <label style='display:inline-block;width:173px'>Description</label>
+        <label style='display:inline-block;width:173px'>Model</label>
+        <label style='display:inline-block;width:173px'>Brand</label>
+        <br />
+        <input type="text" id="newDescription" value="" />
+        <input type="text" id="newModel" value="" />
+        <input type="text" id="newBrand" value="" />
+        <button id="add">Add</button>
+        <br />
+        <br />
+        <div id='products'></div>
     </div>
 </body>
 

@@ -26,7 +26,7 @@ namespace jbsolutions.Utils
                 var decryptedData = RSA.Decrypt(data, false);
                 return Encoding.UTF8.GetString(decryptedData);
             }
-            catch (CryptographicException e)
+            catch
             {
                 return null;
             }
@@ -45,7 +45,7 @@ namespace jbsolutions.Utils
                 var encryptedData = RSA.Encrypt(data, false);
                 return Convert.ToBase64String(encryptedData);
             }
-            catch (CryptographicException e)
+            catch
             {
                 return "";
             }

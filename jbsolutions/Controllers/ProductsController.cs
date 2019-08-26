@@ -1,23 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Web.Http.Cors;
 using jbsolutions.Db;
 using jbsolutions.Models;
 
 namespace jbsolutions.Controllers
 {
+    [Authorize]
     public class ProductsController : ApiController
     {
         [Route("products")]
         [HttpGet]
-        public IHttpActionResult GetProducts()
+        public IHttpActionResult GetProducts(string description = null, string model = null, string brand = null)
         {
             try
             {
-                return Ok(Database.Products);
+                var products = Database.Products;
+                if (!string.IsNullOrEmpty(description))
+                {
+                    Debug.WriteLine(description);
+                    products = products.Where(p => p.Description.Contains(description));
+                }
+
+                if (!string.IsNullOrEmpty(model))
+                {
+                    Debug.WriteLine(model);
+                    products = products.Where(p => p.Model.Contains(model));
+                }
+
+                if (!string.IsNullOrEmpty(brand))
+                {
+                    Debug.WriteLine(brand);
+                    products = products.Where(p => p.Brand.Contains(brand));
+                }
+                return Ok(products);
             }
             catch (Exception e)
             {
@@ -65,6 +86,7 @@ namespace jbsolutions.Controllers
         {
             try
             {
+                Debug.WriteLine(fields.Count);
                 Database.Modify(id, fields);
                 return Ok();
             }

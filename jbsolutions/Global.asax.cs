@@ -9,13 +9,9 @@ namespace jbsolutions
     {
         protected void Application_Start()
         {
+            RsaEncryption.Setup();
             GlobalConfiguration.Configure(WebApiConfig.Register);
             Database.Initialize();
-            RsaEncryption.Setup();
-            var abc = RsaEncryption.Encrypt("this is a thing");
-            var bcd = RsaEncryption.Decrypt(abc);
-            Debug.WriteLine(abc);
-            Debug.WriteLine(bcd);
         }
     }
 }
