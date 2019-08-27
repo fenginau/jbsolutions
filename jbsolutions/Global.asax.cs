@@ -9,8 +9,11 @@ namespace jbsolutions
     {
         protected void Application_Start()
         {
+            // initialize the RSA encryption
             RsaEncryption.Setup();
             GlobalConfiguration.Configure(WebApiConfig.Register);
+
+            // initialize the database
             Database.Initialize();
         }
     }

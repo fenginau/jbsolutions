@@ -9,11 +9,19 @@ namespace jbsolutions.Utils
     {
         internal static RSACryptoServiceProvider RSA;
 
+        /// <summary>
+        /// Assign the RSA provider
+        /// </summary>
         internal static void Setup()
         {
             RSA = new RSACryptoServiceProvider(2048);
         }
 
+        /// <summary>
+        /// Decrypt the cipher string
+        /// </summary>
+        /// <param name="base64Str">Encrypted string in base64 format</param>
+        /// <returns>Decrypted string</returns>
         internal static string Decrypt(string base64Str)
         {
             if (string.IsNullOrEmpty(base64Str))
@@ -32,6 +40,11 @@ namespace jbsolutions.Utils
             }
         }
 
+        /// <summary>
+        /// Encrypt the plain string
+        /// </summary>
+        /// <param name="rawStr">Plain string</param>
+        /// <returns>Encrypted string in base64 format</returns>
         internal static string Encrypt(string rawStr)
         {
             if (string.IsNullOrEmpty(rawStr))
@@ -51,6 +64,10 @@ namespace jbsolutions.Utils
             }
         }
 
+        /// <summary>
+        /// Return RSA private key in string
+        /// </summary>
+        /// <returns>RSA private key</returns>
         internal static string GetPrivateKeyString()
         {
             using (var stream = new MemoryStream())
@@ -89,6 +106,10 @@ namespace jbsolutions.Utils
             }
         }
 
+        /// <summary>
+        /// Return RSA public key in string
+        /// </summary>
+        /// <returns>RSA public key</returns>
         internal static string GetPublicKeyString()
         {
             using (var stream = new MemoryStream())
@@ -144,6 +165,11 @@ namespace jbsolutions.Utils
             }
         }
 
+        /// <summary>
+        /// Encode the stream to byte
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="length"></param>
         private static void EncodeLength(BinaryWriter stream, int length)
         {
             if (length < 0) throw new ArgumentOutOfRangeException("length", "Length must be non-negative");
@@ -170,6 +196,11 @@ namespace jbsolutions.Utils
             }
         }
 
+        /// <summary>
+        /// Encode the integer to byte
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="length"></param>
         private static void EncodeInteger(BinaryWriter stream, byte[] value, bool forceUnsigned = true)
         {
             stream.Write((byte)0x02); // INTEGER

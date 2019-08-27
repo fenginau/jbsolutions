@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Web.Http;
-using System.Web.Http.Cors;
-using jbsolutions.Db;
 using jbsolutions.Models;
 using jbsolutions.Utils;
 using Newtonsoft.Json;
@@ -13,6 +8,10 @@ namespace jbsolutions.Controllers
 {
     public class AuthController : ApiController
     {
+        /// <summary>
+        /// Get server public RSA key
+        /// </summary>
+        /// <returns>RSA public key</returns>
         [Route("auth")]
         [HttpGet]
         public IHttpActionResult GetPublicKey()
@@ -27,6 +26,11 @@ namespace jbsolutions.Controllers
             }
         }
 
+        /// <summary>
+        /// Send a signin request and return JWT token
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns>JWT token</returns>
         [Route("auth")]
         [HttpPost]
         public IHttpActionResult Signin([FromBody] SigninRequest request)

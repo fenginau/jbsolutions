@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
-using System.Web.Http.Cors;
 using jbsolutions.Db;
 using jbsolutions.Models;
 
@@ -14,6 +11,13 @@ namespace jbsolutions.Controllers
     [Authorize]
     public class ProductsController : ApiController
     {
+        /// <summary>
+        /// Get product with filter
+        /// </summary>
+        /// <param name="description"></param>
+        /// <param name="model"></param>
+        /// <param name="brand"></param>
+        /// <returns></returns>
         [Route("products")]
         [HttpGet]
         public IHttpActionResult GetProducts(string description = null, string model = null, string brand = null)
@@ -38,6 +42,7 @@ namespace jbsolutions.Controllers
                     Debug.WriteLine(brand);
                     products = products.Where(p => p.Brand.Contains(brand));
                 }
+
                 return Ok(products);
             }
             catch (Exception e)
@@ -46,6 +51,11 @@ namespace jbsolutions.Controllers
             }
         }
 
+        /// <summary>
+        /// Get single product with ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [Route("products/{id}")]
         [HttpGet]
         public IHttpActionResult GetProduct(string id)
@@ -65,6 +75,11 @@ namespace jbsolutions.Controllers
             }
         }
 
+        /// <summary>
+        /// Add a new product
+        /// </summary>
+        /// <param name="product"></param>
+        /// <returns></returns>
         [Route("products")]
         [HttpPost]
         public IHttpActionResult AddProduct([FromBody] Product product)
@@ -80,6 +95,12 @@ namespace jbsolutions.Controllers
             }
         }
 
+        /// <summary>
+        /// Edit a product
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="fields"></param>
+        /// <returns></returns>
         [Route("products/{id}")]
         [HttpPut]
         public IHttpActionResult EditProduct(string id, [FromBody] List<ModifyModel> fields)
@@ -96,6 +117,11 @@ namespace jbsolutions.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a product
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [Route("products/{id}")]
         [HttpDelete]
         public IHttpActionResult DeleteProduct(string id)

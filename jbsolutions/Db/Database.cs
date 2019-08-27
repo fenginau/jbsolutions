@@ -3,11 +3,8 @@ using jbsolutions.Models;
 using jbsolutions.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Web;
 using System.Web.Hosting;
 
 namespace jbsolutions.Db
@@ -20,11 +17,6 @@ namespace jbsolutions.Db
     /// </summary>
     public class Database
     {
-        /// <summary>
-        /// The version code is the snapshot version code. It is the same as the snapshot-log file name.
-        /// </summary>
-        private static int Version = 0;
-
         // Data files are located in App_Date folder 
         private static readonly string DbPath = HostingEnvironment.MapPath("~/App_Data");
         private static readonly char Divider = ',';
@@ -39,27 +31,35 @@ namespace jbsolutions.Db
             get => _products;
         }
 
-        internal static void Initialize()
+        /// <summary>
+        /// Initialize the database. 
+        /// If the path is given then will use the path to store the files.
+        /// Otherwise it will use App_Data folder instead.
+        /// It will use the latest data file in the directory to retore the data into memory.
+        /// </summary>
+        /// <param name="path">The path to data location.</param>
+        public static void Initialize(string path = null)
         {
             try
             {
                 // Get all files in the directory. The file with the biggest number is the latest snapshot-log file
-                var files = Directory.GetFiles(DbPath).OrderByDescending(f => f);
-
-                foreach (var file in files)
+                var log = Directory.GetFiles(path ?? DbPath).Select(f =>
                 {
-                    var fileName = Path.GetFileName(file);
-
-                    // A valid log filename must be integer.
-                    if (int.TryParse(fileName, out Version))
+                    FileInfo fi = new FileInfo(f);
+                    return new
                     {
-                        _logFile = file;
-                        break;
-                    }
+                        Path = f,
+                        Date = fi.CreationTimeUtc,
+                    };
+                }).ToArray().OrderByDescending(f => f.Date).FirstOrDefault();
+
+                if (log != null)
+                {
+                    _logFile = log.Path;
+                    LoadData();
                 }
 
-                LoadData();
-                TakeSnapshot();
+                TakeSnapshot(path ?? DbPath);
             }
             catch (Exception e)
             {
@@ -67,6 +67,9 @@ namespace jbsolutions.Db
             }
         }
 
+        /// <summary>
+        /// Load data into file.
+        /// </summary>
         private static void LoadData()
         {
             var count = 1;
@@ -80,6 +83,7 @@ namespace jbsolutions.Db
                         while ((line = file.ReadLine()) != null)
                         {
                             var arr = AesEncryption.Decrypt(line).Split(Divider);
+                            // line should start with indicator and other object
                             if (arr.Length < 2)
                             {
                                 Log($"Line incorrent. Line {count}");
@@ -134,11 +138,15 @@ namespace jbsolutions.Db
             }
         }
 
-        private static void TakeSnapshot()
+        /// <summary>
+        /// Snap shot will be taken every time service is restarted.
+        /// </summary>
+        /// <param name="path">The directory that store the log files.</param>
+        private static void TakeSnapshot(string path)
         {
             try
             {
-                var file = Path.Combine(DbPath, (++Version).ToString());
+                var file = Path.Combine(path, DateTime.UtcNow.Ticks.ToString());
 
                 // Delete if exists.
                 if (File.Exists(file))
@@ -148,9 +156,10 @@ namespace jbsolutions.Db
 
                 using (StreamWriter fs = File.CreateText(file))
                 {
+                    // dump every product to file
                     foreach (var product in _products)
                     {
-                        var line = String.Join(Divider.ToString(), new String[] {
+                        var line = string.Join(Divider.ToString(), new string[] {
                             LogType.Snapshot,
                             product.Id,
                             ToLogFormat(product.Brand),
@@ -168,6 +177,11 @@ namespace jbsolutions.Db
             }
         }
 
+        /// <summary>
+        /// Modify the product according to the provided fields and value.
+        /// </summary>
+        /// <param name="id">The id of the product</param>
+        /// <param name="fields">Fields that will be modified</param>
         internal static void Modify(string id, List<ModifyModel> fields)
         {
             try
@@ -183,13 +197,14 @@ namespace jbsolutions.Db
                     // Update the log file first.
                     using (StreamWriter fs = File.AppendText(_logFile))
                     {
-                        var arr = new String[fields.Count + 2];
-                        arr[0] = LogType.Modify;
-                        arr[1] = id;
+                        var arr = new string[fields.Count + 2];
+                        arr[0] = LogType.Modify; // first is the indicator
+                        arr[1] = id; // second is the id
                         var i = 2;
 
                         fields.ForEach(m =>
                         {
+                            // map property and set value
                             var prop = product.GetType()
                                 .GetProperties()
                                 .SingleOrDefault(p => p.Name.Equals(m.Prop, StringComparison.CurrentCultureIgnoreCase));
@@ -198,7 +213,7 @@ namespace jbsolutions.Db
                             i++;
                         });
 
-                        var line = String.Join(Divider.ToString(), arr);
+                        var line = string.Join(Divider.ToString(), arr);
                         fs.WriteLine(AesEncryption.Encrypt(line));
                     }
 
@@ -215,6 +230,10 @@ namespace jbsolutions.Db
             }
         }
 
+        /// <summary>
+        /// Add a product
+        /// </summary>
+        /// <param name="product">The product to be added</param>
         internal static void Add(Product product)
         {
             try
@@ -225,7 +244,7 @@ namespace jbsolutions.Db
                     // Update the log file first.
                     using (StreamWriter fs = File.AppendText(_logFile))
                     {
-                        var line = String.Join(Divider.ToString(), new String[] {
+                        var line = string.Join(Divider.ToString(), new string[] {
                             LogType.Add,
                             product.Id,
                             ToLogFormat(product.Brand),
@@ -245,6 +264,10 @@ namespace jbsolutions.Db
             }
         }
 
+        /// <summary>
+        /// Delete a product
+        /// </summary>
+        /// <param name="id">The product Id that will be deleted</param>
         internal static void Delete(string id)
         {
             try
@@ -254,7 +277,7 @@ namespace jbsolutions.Db
                     // Update the log file first.
                     using (StreamWriter fs = File.AppendText(_logFile))
                     {
-                        var line = String.Join(Divider.ToString(), new String[] {
+                        var line = string.Join(Divider.ToString(), new string[] {
                             LogType.Delete,
                             id,
                         });
@@ -271,11 +294,22 @@ namespace jbsolutions.Db
             }
         }
 
+        /// <summary>
+        /// Remove from list according to id
+        /// </summary>
+        /// <param name="id">The id to be removed</param>
         private static void Remove(string id)
         {
             _products.RemoveAll(p => p.Id == id);
         }
 
+
+        /// <summary>
+        /// Insert or update a product.
+        /// If not exist then insert otherwise then update.
+        /// </summary>
+        /// <param name="product"></param>
+        /// <param name="isInsert"></param>
         private static void InsertOrUpdate(Product product, bool isInsert = false)
         {
             try

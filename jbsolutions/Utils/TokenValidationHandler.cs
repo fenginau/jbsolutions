@@ -13,6 +13,12 @@ namespace jbsolutions.Utils
 {
     internal class TokenValidationHandler : DelegatingHandler
     {
+        /// <summary>
+        /// Get token from request, and check token starts with Bearer, that is the JWT woken prefix
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
         private static bool TryRetrieveToken(HttpRequestMessage request, out string token)
         {
             token = null;
@@ -26,6 +32,12 @@ namespace jbsolutions.Utils
             return true;
         }
 
+        /// <summary>
+        /// Validating the token using TokenValidationParameters
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             HttpStatusCode statusCode;
@@ -71,6 +83,14 @@ namespace jbsolutions.Utils
             return Task<HttpResponseMessage>.Factory.StartNew(() => new HttpResponseMessage(statusCode) { });
         }
 
+        /// <summary>
+        /// Check the token is not expired
+        /// </summary>
+        /// <param name="notBefore"></param>
+        /// <param name="expires"></param>
+        /// <param name="securityToken"></param>
+        /// <param name="validationParameters"></param>
+        /// <returns></returns>
         public bool LifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken securityToken, TokenValidationParameters validationParameters)
         {
             if (expires != null)

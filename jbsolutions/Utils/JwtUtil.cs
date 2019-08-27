@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Web;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using jbsolutions.Models;
@@ -11,6 +8,11 @@ namespace jbsolutions.Utils
 {
     public class JwtUtil
     {
+        /// <summary>
+        /// Generate the JWT token
+        /// </summary>
+        /// <param name="auth">Authentication Information</param>
+        /// <returns>JWT Token</returns>
         internal static string GenerateToken(AuthModel auth)
         {
             try
